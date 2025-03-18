@@ -23,4 +23,14 @@ public class UserProjectService {
 
         return userProjectRepository.save(userProject);
     }
+
+    public UserProject getProjectByUserAndProjectId(Long userId, Long projectId) {
+        UserProject userProject = userProjectRepository.findByUserIdAndProjectId(userId, projectId);
+
+        if (userProject == null) {
+            return null;
+        }
+
+        return userProjectRepository.save(userProject);
+    }
 }
