@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.transaction.Transactional;
 import vasu.easyproject.dto.AddUserRequestDTO;
 import vasu.easyproject.dto.ProjectWithUsersResponseDTO;
 import vasu.easyproject.dto.UserProjectWithRoleDTO;
@@ -52,7 +54,7 @@ public class ProjectController {
         Project savedProject = projectService.create(project);
 
         // Associe l'utilisateur au projet avec son rôle
-        UserProject savedUserProject = userProjectService.create(user, savedProject, Role.ADMIN);
+        userProjectService.create(user, savedProject, Role.ADMIN);
 
         // Appel à la méthode getProjectWithUsers pour obtenir la réponse complète avec les utilisateurs et leurs rôles
         return getProjectWithUsers(savedProject.getId());  // Passer directement l'ID du projet
@@ -91,7 +93,7 @@ public class ProjectController {
         }
 
         // Ajoute l'utilisateur au projet avec son rôle
-        UserProject addedUserProject = userProjectService.create(user.get(), project.get(), request.getRole());
+        userProjectService.create(user.get(), project.get(), request.getRole());
 
         // Appel à la méthode getProjectWithUsers pour obtenir la réponse complète avec les utilisateurs et leurs rôles
         return getProjectWithUsers(project.get().getId());  // Passer directement l'ID du projet
@@ -155,5 +157,36 @@ public class ProjectController {
 
         // Retourner la liste des projets
         return ResponseEntity.ok(projectDtos);
+    }
+
+
+    @DeleteMapping("/{projectId}")
+    @Transactional
+    public ResponseEntity<?> deleteProject(@PathVariable Long projectId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        Long adminId = (Long) authentication.getDetails(); // Récupère l'ID utilisateur connecté
+
+        // Vérifie si l'utilisateur est admin sur le projet
+        UserProject userProject = userProjectService.getProjectByUserAndProjectId(adminId, projectId);
+
+        if (userProject == null || userProject.getRole() != Role.ADMIN) {
+            return ResponseEntity.status(403).body("User not permitted to delete this project");
+        }
+
+        // Récupère le projet à supprimer
+        Optional<Project> project = projectService.getProjectById(projectId);
+        if (project.isEmpty()) {
+            return ResponseEntity.status(404).body("Project not found");
+        }
+
+        // Supprimer toutes les relations dans user_project pour ce projet
+        userProjectService.deleteByProjectId(projectId);
+
+        // Supprime le projet
+        projectService.delete(project.get());
+
+        // Retourne une réponse de succès
+        return ResponseEntity.status(204).body("Project deleted successfully");
     }
 }

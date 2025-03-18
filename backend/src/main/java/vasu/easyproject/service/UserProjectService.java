@@ -43,4 +43,8 @@ public class UserProjectService {
     public List<UserProject> getProjectsByUserId(Long userId) {
         return userProjectRepository.findByUserId(userId);
     }
+
+    public void deleteByProjectId(Long projectId) {
+        userProjectRepository.deleteByProjectId(projectId);
+    }    
 }
