@@ -1,5 +1,7 @@
 package vasu.easyproject.service;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -32,5 +34,9 @@ public class UserProjectService {
         }
 
         return userProjectRepository.save(userProject);
+    }
+
+    public List<UserProject> getUsersByProjectId(Long projectId) {
+        return userProjectRepository.findByProjectId(projectId);
     }
 }
