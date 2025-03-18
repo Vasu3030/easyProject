@@ -14,6 +14,8 @@ import jakarta.persistence.GenerationType;
 
 import java.util.Set;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.Column;
 
 @Entity
@@ -38,5 +40,6 @@ public class User {
     private String password;
 
     @OneToMany(mappedBy = "user")
+    @JsonIgnore
     private Set<UserProject> userProjects;
 }

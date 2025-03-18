@@ -25,7 +25,7 @@ public class AuthController {
     public ResponseEntity<?> register(@RequestBody User user) {
         User savedUser = userService.saveUser(user);  // L'ID est maintenant généré
 
-        String token = jwtUtil.generateToken(savedUser.getUsername());
+        String token = jwtUtil.generateToken(savedUser.getUsername(), savedUser.getId());
 
         UserResponseDTO userResponse = new UserResponseDTO(
             savedUser.getId(), 
@@ -34,7 +34,7 @@ public class AuthController {
             token
         );
 
-        return ResponseEntity.ok(userResponse);
+        return ResponseEntity.status(201).body(userResponse);
     }
 
     @PostMapping("/login")
@@ -46,9 +46,9 @@ public class AuthController {
         }
 
         Boolean validCredentials = userService.validateCredentials(existingUser.getPassword(), user.getPassword());
-
+        
         if (validCredentials) {
-            String token = jwtUtil.generateToken(existingUser.getUsername());
+            String token = jwtUtil.generateToken(existingUser.getUsername(), existingUser.getId());
             UserResponseDTO userResponse = new UserResponseDTO(
             existingUser.getId(), 
             existingUser.getUsername(),

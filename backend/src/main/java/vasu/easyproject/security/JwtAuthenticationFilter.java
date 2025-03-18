@@ -9,9 +9,9 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import org.springframework.stereotype.Component; // Ajouter cette importation
+import org.springframework.stereotype.Component;
 
-@Component  // Ajoute cette annotation pour que Spring gère cette classe comme un bean
+@Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
@@ -24,16 +24,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         String token = extractTokenFromRequest(request);
-                
+
         if (token != null && jwtUtil.validateToken(token, jwtUtil.extractUsername(token))) {
-            Authentication authentication = new UsernamePasswordAuthenticationToken(
-                    jwtUtil.extractUsername(token), null, null);  // Remplacer null par les authorities si nécessaire
+            String username = jwtUtil.extractUsername(token);
+            Long userId = jwtUtil.extractUserIdFromToken(token);  // Extraction de l'ID utilisateur à partir du token
+
+            // Créer un objet Authentication avec le username et userId
+            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                    username, null, null);  // On peut ajouter les authorities ici si nécessaire
+
+            // Ajouter l'userId dans les détails de l'authentification
+            authentication.setDetails(userId);  // Ajouter l'userId dans les détails
+
+            // Ajouter l'authentification dans le SecurityContext
             SecurityContextHolder.getContext().setAuthentication(authentication);
         }
 
         chain.doFilter(request, response);
     }
 
+
+
+    // Extraire le token de l'en-tête Authorization
     private String extractTokenFromRequest(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
