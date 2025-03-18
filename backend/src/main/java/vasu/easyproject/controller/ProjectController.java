@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,6 +22,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.transaction.Transactional;
 import vasu.easyproject.dto.AddUserRequestDTO;
 import vasu.easyproject.dto.ProjectWithUsersResponseDTO;
+import vasu.easyproject.dto.UpdateUserRoleRequestDTO;
 import vasu.easyproject.dto.UserProjectWithRoleDTO;
 import vasu.easyproject.model.Project;
 import vasu.easyproject.model.Role;
@@ -188,5 +190,50 @@ public class ProjectController {
 
         // Retourne une réponse de succès
         return ResponseEntity.status(204).body("Project deleted successfully");
+    }
+
+
+    @PutMapping("/updateUserRole")
+    @Transactional
+    public ResponseEntity<?> updateUserRole(@RequestBody UpdateUserRoleRequestDTO request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        Long adminId = (Long) authentication.getDetails(); // Récupère l'ID utilisateur connecté
+
+        // Vérifie si l'utilisateur est admin sur le projet
+        UserProject userProject = userProjectService.getProjectByUserAndProjectId(adminId, request.getProjectId());
+
+        if (userProject == null || userProject.getRole() != Role.ADMIN) {
+            return ResponseEntity.status(403).body("User not permitted to update roles");
+        }
+        if (request.getUserId() == adminId) {
+            return ResponseEntity.status(400).body("Can't update your own role");
+        }
+
+        // Récupère l'utilisateur à mettre à jour et vérifie s'il existe
+        Optional<User> user = userService.getUserById(request.getUserId());
+        if (user.isEmpty()) {
+            return ResponseEntity.status(404).body("User not found");
+        }
+
+        // Récupère le projet et vérifie s'il existe
+        Optional<Project> project = projectService.getProjectById(request.getProjectId());
+        if (project.isEmpty()) {
+            return ResponseEntity.status(404).body("Project not found");
+        }
+
+        // Récupère l'enregistrement UserProject existant
+        UserProject userProjectToUpdate = userProjectService.getProjectByUserAndProjectId(request.getUserId(), request.getProjectId());
+
+        if (userProjectToUpdate == null) {
+            return ResponseEntity.status(404).body("User not assigned to this project");
+        }
+
+        // Met à jour le rôle de l'utilisateur
+        userProjectToUpdate.setRole(request.getRole());
+        userProjectService.save(userProjectToUpdate);
+
+        // Retourne une réponse de succès avec le rôle mis à jour
+        return getProjectWithUsers(project.get().getId());
     }
 }

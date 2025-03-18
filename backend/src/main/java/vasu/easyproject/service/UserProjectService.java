@@ -47,4 +47,8 @@ public class UserProjectService {
     public void deleteByProjectId(Long projectId) {
         userProjectRepository.deleteByProjectId(projectId);
     }    
+
+    public UserProject save(UserProject userProject) {
+        return userProjectRepository.save(userProject);
+    }
 }
