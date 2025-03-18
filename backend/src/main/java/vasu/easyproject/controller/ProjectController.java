@@ -121,4 +121,39 @@ public class ProjectController {
         
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/myProjects")
+    public ResponseEntity<?> getMyProjects() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        // Récupérer l'utilisateur connecté
+        User user = userService.getUserByUsername(authentication.getName());
+
+        // Récupérer les UserProject associés à cet utilisateur
+        List<UserProject> userProjects = userProjectService.getProjectsByUserId(user.getId());
+
+        // Si l'utilisateur n'a aucun projet, renvoyer une réponse vide
+        if (userProjects.isEmpty()) {
+            return ResponseEntity.status(404).body("No projects found for this user");
+        }
+
+        // Mapper les UserProject pour renvoyer les informations du projet et du rôle
+        List<ProjectWithUsersResponseDTO> projectDtos = userProjects.stream()
+                .map(userProject -> {
+                    Project project = userProject.getProject();
+                    // Utiliser la méthode getProjectWithUsers pour chaque projet auquel l'utilisateur appartient
+                    return new ProjectWithUsersResponseDTO(project, 
+                            userProjectService.getUsersByProjectId(project.getId()).stream()
+                                    .map(up -> new UserProjectWithRoleDTO(
+                                            up.getUser().getId(),
+                                            up.getUser().getUsername(),
+                                            up.getUser().getEmail(),
+                                            up.getRole()))
+                                    .collect(Collectors.toList()));
+                })
+                .collect(Collectors.toList());
+
+        // Retourner la liste des projets
+        return ResponseEntity.ok(projectDtos);
+    }
 }
